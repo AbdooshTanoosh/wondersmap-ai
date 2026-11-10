@@ -199,3 +199,34 @@ button {
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+.search-card {
+  max-width: 800px;
+}
+
+.search-card input[type="date"] {
+  min-width: 0;
+}
+
+.trip-result {
+  margin-top: 20px;
+  padding: 18px;
+  background: #e6f7f3;
+  color: #075e54;
+  border-radius: 10px;
+  text-align: start;
+}
+
+.trip-result p {
+  color: #075e54;
+  margin: 8px 0;
+}
+
+.plan-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+[dir="rtl"] input[type="date"] {
+  direction: rtl;
+}

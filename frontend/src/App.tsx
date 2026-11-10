@@ -3,93 +3,108 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./App.css";
 
+type TripSummary = {
+  departure_city: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  duration_days: number;
+  adults: number;
+  children: number;
+  total_travelers: number;
+  budget: number;
+  currency: string;
+  preferences: string[];
+  language: string;
+};
+
 type TripResponse = {
   status: string;
   message: string;
-  trip: {
-    destination: string;
-    travelers: number;
-    budget: number;
-    currency: string;
-    language: string;
-  };
+  trip_summary: TripSummary;
 };
 
 function App() {
   const { t, i18n } = useTranslation();
-
-  // Trip form state
-  const [destination, setDestination] = useState("");
-  const [travelers, setTravelers] = useState(2);
-  const [budget, setBudget] = useState(5000);
-
-  // API response state
-  const [result, setResult] = useState("");
-  const [tripData, setTripData] = useState<TripResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-
   const isArabic = i18n.language === "ar";
 
-  // Change website language
+  const [departureCity, setDepartureCity] = useState("");
+  const [destination, setDestination] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [budget, setBudget] = useState(5000);
+  const [preferences, setPreferences] = useState("");
+
+  const [tripData, setTripData] = useState<TripResponse | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const changeLanguage = async (language: "en" | "ar") => {
     await i18n.changeLanguage(language);
 
     localStorage.setItem("wondersmap-language", language);
 
     document.documentElement.lang = language;
-    document.documentElement.dir =
-      language === "ar" ? "rtl" : "ltr";
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
 
-    // Clear previous result when changing language
-    setResult("");
     setTripData(null);
+    setError("");
   };
 
-  // Submit trip request to FastAPI
-  const handlePlanTrip = async (
+  const handlePreviewTrip = async (
     event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
 
     setLoading(true);
-    setResult("");
+    setError("");
     setTripData(null);
+
+    if (endDate < startDate) {
+      setError(
+        isArabic
+          ? "تاريخ العودة يجب أن يكون بعد تاريخ المغادرة."
+          : "End date must be on or after start date."
+      );
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/api/trips/plan",
+        "http://127.0.0.1:8000/api/trips/preview",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            departure_city: departureCity.trim(),
             destination: destination.trim(),
-            travelers,
+            start_date: startDate,
+            end_date: endDate,
+            adults,
+            children,
             budget,
+            currency: "CAD",
+            preferences: preferences
+              .split(",")
+              .map((p) => p.trim())
+              .filter(Boolean),
             language: isArabic ? "ar" : "en",
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Trip request failed");
+        throw new Error(`API error: ${response.status}`);
       }
 
       const data: TripResponse = await response.json();
-
-      setResult(data.message);
       setTripData(data);
-
-    } catch (error) {
-      console.error("Trip planning error:", error);
-
-      setResult(
-        isArabic
-          ? "حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة مرة أخرى."
-          : "Error connecting to the server. Please try again."
-      );
-
+    } catch (err) {
+      console.error(err);
+      setError(t("connectionError"));
     } finally {
       setLoading(false);
     }
@@ -97,200 +112,189 @@ function App() {
 
   return (
     <div className="app">
-
-      {/* Navigation Bar */}
       <header className="navbar">
-
-        {/* Company Logo */}
         <div className="brand">
           <img
             src="/wondersmap-logo.png"
-            alt="Wonders Map company logo"
+            alt="Wonders Map"
             className="brand-logo"
           />
-
-          <span className="brand-name">
-            WondersMap AI
-          </span>
+          <span className="brand-name">WondersMap AI</span>
         </div>
 
-        {/* Navigation Links */}
-        <nav aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}>
+        <nav aria-label="Main navigation">
           <a href="#home">{t("home")}</a>
           <a href="#destinations">{t("destinations")}</a>
           <a href="#trips">{t("myTrips")}</a>
         </nav>
 
-        {/* Language Switcher */}
         <div className="nav-actions">
-
           <button
             type="button"
             className="language-button"
-            onClick={() =>
-              changeLanguage(isArabic ? "en" : "ar")
-            }
+            onClick={() => changeLanguage(isArabic ? "en" : "ar")}
           >
             {isArabic ? "English" : "العربية"}
           </button>
-
-          <button
-            type="button"
-            className="login-button"
-          >
+          <button type="button" className="login-button">
             {t("login")}
           </button>
-
         </div>
       </header>
 
-      {/* Main Website */}
       <main id="home">
-
-        {/* Hero Section */}
         <section className="hero">
-
-          <span className="eyebrow">
-            ✦ WondersMap AI
-          </span>
-
+          <span className="eyebrow">✦ WondersMap AI</span>
           <h1>{t("heroTitle")}</h1>
-
           <p>{t("heroSubtitle")}</p>
 
-          {/* Trip Planning Form */}
-          <form
-            className="search-card"
-            onSubmit={handlePlanTrip}
-          >
-
-            {/* Destination */}
-            <label htmlFor="destination">
-              {t("destination")}
-            </label>
-
-            <input
-              id="destination"
-              type="text"
-              placeholder={t("destination")}
-              value={destination}
-              onChange={(event) =>
-                setDestination(event.target.value)
-              }
-              required
-              minLength={2}
-              maxLength={100}
-            />
+          <form className="search-card" onSubmit={handlePreviewTrip}>
+            <div className="form-row">
+              <div>
+                <label htmlFor="departure">{t("departureCity")}</label>
+                <input
+                  id="departure"
+                  type="text"
+                  value={departureCity}
+                  onChange={(e) => setDepartureCity(e.target.value)}
+                  placeholder={t("departureCity")}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="destination">{t("destination")}</label>
+                <input
+                  id="destination"
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder={t("destination")}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                />
+              </div>
+            </div>
 
             <div className="form-row">
-
-              {/* Number of Travelers */}
               <div>
-                <label htmlFor="travelers">
-                  {t("travelers")}
-                </label>
-
+                <label htmlFor="startDate">{t("startDate")}</label>
                 <input
-                  id="travelers"
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="endDate">{t("endDate")}</label>
+                <input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div>
+                <label htmlFor="adults">{t("adults")}</label>
+                <input
+                  id="adults"
                   type="number"
                   min="1"
                   max="30"
-                  value={travelers}
-                  onChange={(event) =>
-                    setTravelers(Number(event.target.value))
-                  }
+                  value={adults}
+                  onChange={(e) => setAdults(Number(e.target.value))}
                   required
                 />
               </div>
-
-              {/* Travel Budget */}
               <div>
-                <label htmlFor="budget">
-                  {t("budget")} (CAD)
-                </label>
-
+                <label htmlFor="children">{t("children")}</label>
                 <input
-                  id="budget"
+                  id="children"
                   type="number"
-                  min="1"
-                  step="0.01"
-                  value={budget}
-                  onChange={(event) =>
-                    setBudget(Number(event.target.value))
-                  }
+                  min="0"
+                  max="20"
+                  value={children}
+                  onChange={(e) => setChildren(Number(e.target.value))}
                   required
                 />
               </div>
-
             </div>
 
-            {/* Submit Button */}
+            <label htmlFor="budget">{t("budget")} (CAD)</label>
+            <input
+              id="budget"
+              type="number"
+              min="1"
+              step="0.01"
+              value={budget}
+              onChange={(e) => setBudget(Number(e.target.value))}
+              required
+            />
+
+            <label htmlFor="preferences">{t("preferences")}</label>
+            <input
+              id="preferences"
+              type="text"
+              value={preferences}
+              onChange={(e) => setPreferences(e.target.value)}
+              placeholder={
+                isArabic
+                  ? "عائلي، مواقع تاريخية، طعام حلال"
+                  : "Family-friendly, Historical sites, Halal food"
+              }
+            />
+
             <button
               className="plan-button"
               type="submit"
               disabled={loading}
             >
-              {loading
-                ? isArabic
-                  ? "جاري إرسال الطلب..."
-                  : "Submitting..."
-                : `✨ ${t("planTrip")}`}
+              {loading ? t("loading") : `✨ ${t("previewTrip")}`}
             </button>
 
-            {/* API Response */}
-            {result && (
-              <div
-                className="trip-result"
-                role="status"
-                aria-live="polite"
-              >
-                <p>{result}</p>
-
-                {/* Display successful trip details */}
-                {tripData && (
-                  <div className="trip-details">
-
-                    <h3>
-                      {isArabic
-                        ? "تفاصيل الرحلة"
-                        : "Trip Details"}
-                    </h3>
-
-                    <p>
-                      <strong>
-                        {isArabic
-                          ? "الوجهة:"
-                          : "Destination:"}
-                      </strong>{" "}
-                      {tripData.trip.destination}
-                    </p>
-
-                    <p>
-                      <strong>
-                        {isArabic
-                          ? "عدد المسافرين:"
-                          : "Travelers:"}
-                      </strong>{" "}
-                      {tripData.trip.travelers}
-                    </p>
-
-                    <p>
-                      <strong>
-                        {isArabic
-                          ? "الميزانية:"
-                          : "Budget:"}
-                      </strong>{" "}
-                      {tripData.trip.budget.toLocaleString(
-                        isArabic ? "ar-EG" : "en-CA"
-                      )}{" "}
-                      {tripData.trip.currency}
-                    </p>
-
-                  </div>
-                )}
+            {error && (
+              <div className="trip-result" role="alert">
+                {error}
               </div>
             )}
 
+            {tripData && (
+              <div className="trip-result" role="status">
+                <h3>{t("tripSummary")}</h3>
+                <p>{tripData.message}</p>
+                <p>
+                  <strong>{t("departureCity")}:</strong>{" "}
+                  {tripData.trip_summary.departure_city}
+                </p>
+                <p>
+                  <strong>{t("destination")}:</strong>{" "}
+                  {tripData.trip_summary.destination}
+                </p>
+                <p>
+                  <strong>{t("duration")}:</strong>{" "}
+                  {tripData.trip_summary.duration_days} {t("days")}
+                </p>
+                <p>
+                  <strong>{t("totalTravelers")}:</strong>{" "}
+                  {tripData.trip_summary.total_travelers}
+                </p>
+                <p>
+                  <strong>{t("budget")}:</strong>{" "}
+                  {tripData.trip_summary.budget.toLocaleString(
+                    isArabic ? "ar-EG" : "en-CA"
+                  )} CAD
+                </p>
+              </div>
+            )}
           </form>
         </section>
       </main>

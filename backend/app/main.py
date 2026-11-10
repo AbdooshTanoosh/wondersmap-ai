@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from app.schemas.trip import AITripRequest
 from typing import Literal
 
 app = FastAPI(
@@ -57,6 +58,38 @@ def plan_trip(trip: TripRequest):
             "travelers": trip.travelers,
             "budget": trip.budget,
             "currency": "CAD",
+            "language": trip.language
+        }
+    }
+
+@app.post("/api/trips/preview")
+def preview_trip(trip: AITripRequest):
+
+    duration = (
+        trip.end_date - trip.start_date
+    ).days + 1
+
+    total_travelers = trip.adults + trip.children
+
+    return {
+        "status": "success",
+        "message": (
+            "تم التحقق من تفاصيل الرحلة بنجاح"
+            if trip.language == "ar"
+            else "Trip details validated successfully"
+        ),
+        "trip_summary": {
+            "departure_city": trip.departure_city,
+            "destination": trip.destination,
+            "start_date": trip.start_date,
+            "end_date": trip.end_date,
+            "duration_days": duration,
+            "adults": trip.adults,
+            "children": trip.children,
+            "total_travelers": total_travelers,
+            "budget": trip.budget,
+            "currency": trip.currency,
+            "preferences": trip.preferences,
             "language": trip.language
         }
     }
