@@ -3,6 +3,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.schemas.trip import AITripRequest
+from fastapi import HTTPException
+from openai import OpenAIError
+
+from app.schemas.itinerary import AIItineraryWithBudget
+from app.services.budget_service import calculate_trip_budget
+from app.services.ai_trip_service import generate_ai_itinerary
 from typing import Literal
 
 app = FastAPI(
@@ -93,3 +99,55 @@ def preview_trip(trip: AITripRequest):
             "language": trip.language
         }
     }
+
+
+@app.post(
+    "/api/trips/generate",
+    response_model=AIItineraryWithBudget
+)
+def generate_trip(trip: AITripRequest):
+
+    duration = (
+        trip.end_date - trip.start_date
+    ).days + 1
+
+    if duration > 7:
+        raise HTTPException(
+            status_code=400,
+            detail="AI generation supports up to 7 days."
+        )
+
+    try:
+        # Generate itinerary using OpenAI.
+        itinerary = generate_ai_itinerary(trip)
+
+        # Calculate costs using Python.
+        budget_summary = calculate_trip_budget(
+            itinerary,
+            trip.budget
+        )
+
+        # Return itinerary and budget together.
+        return AIItineraryWithBudget(
+            **itinerary.model_dump(),
+            budget_summary=budget_summary
+        )
+
+    except (OpenAIError, RuntimeError, ValueError) as exc:
+        import logging
+
+        logger = logging.getLogger("wondersmap.ai")
+
+        logger.error(
+            "AI generation failed: type=%s, status=%s, code=%s",
+            type(exc).__name__,
+            getattr(exc, "status_code", None),
+            getattr(exc, "code", None),
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="AI itinerary generation is unavailable."
+        ) from exc
+
+
