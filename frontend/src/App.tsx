@@ -1,6 +1,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import AuthModal, { type AuthUser } from "./components/AuthModal";
 import "./App.css";
 
 // ==========================================
@@ -69,6 +70,7 @@ type AIItinerary = {
   budget_summary: BudgetSummary;
 };
 
+
 const expenseCategories: {
   key: ExpenseCategory;
   en: string;
@@ -126,6 +128,19 @@ function App() {
 
   const [itinerary, setItinerary] =
     useState<AIItinerary | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  const handleAuthenticated = (token: string, user: AuthUser) => {
+  setAccessToken(token);
+  setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+  setAccessToken(null);
+  setCurrentUser(null);
+  };
 
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -480,12 +495,29 @@ function App() {
               : "العربية"}
           </button>
 
-          <button
-            type="button"
-            className="login-button"
-          >
-            {t("login")}
-          </button>
+          {currentUser ? (
+  <div className="user-menu">
+    <span>
+      {isArabic ? "مرحباً" : "Hello"}, {currentUser.full_name}
+    </span>
+
+    <button
+      type="button"
+      className="login-button"
+      onClick={handleLogout}
+    >
+      {isArabic ? "تسجيل الخروج" : "Log Out"}
+    </button>
+  </div>
+) : (
+  <button
+    type="button"
+    className="login-button"
+    onClick={() => setShowAuthModal(true)}
+  >
+    {t("login")}
+  </button>
+)}
 
         </div>
       </header>
@@ -1092,6 +1124,13 @@ function App() {
           </form>
         </section>
       </main>
+      {showAuthModal && (
+        <AuthModal
+           isArabic={isArabic}
+           onClose={() => setShowAuthModal(false)}
+           onAuthenticated={handleAuthenticated}
+          />
+      )}
     </div>
   );
 }

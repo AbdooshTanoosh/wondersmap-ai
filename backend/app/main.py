@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.schemas.trip import AITripRequest
+from app.api.auth import router as auth_router
 from fastapi import HTTPException
 from openai import OpenAIError
 
@@ -16,13 +17,14 @@ app = FastAPI(
     description="Backend API for the bilingual AI travel planner.",
     version="0.2.0"
 )
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
