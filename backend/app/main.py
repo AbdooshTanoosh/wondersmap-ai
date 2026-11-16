@@ -6,7 +6,7 @@ from app.schemas.trip import AITripRequest
 from app.api.auth import router as auth_router
 from fastapi import HTTPException
 from openai import OpenAIError
-
+from app.api.trips import router as saved_trips_router
 from app.schemas.itinerary import AIItineraryWithBudget
 from app.services.budget_service import calculate_trip_budget
 from app.services.ai_trip_service import generate_ai_itinerary
@@ -18,6 +18,7 @@ app = FastAPI(
     version="0.2.0"
 )
 app.include_router(auth_router)
+app.include_router(saved_trips_router)
 
 app.add_middleware(
     CORSMiddleware,

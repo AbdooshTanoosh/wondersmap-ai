@@ -1,8 +1,10 @@
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import AuthModal, { type AuthUser } from "./components/AuthModal";
 import "./App.css";
+import MyTrips from "./components/MyTrips";
+import SavedTripDetails from "./components/SavedTripDetails";
 
 // ==========================================
 // TYPES
@@ -131,6 +133,9 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState<"home" | "trips">("home");
+  
+ const [selectedTripId, setSelectedTripId] = useState<number | null>(null);
 
   const handleAuthenticated = (token: string, user: AuthUser) => {
   setAccessToken(token);
@@ -141,6 +146,12 @@ function App() {
   setAccessToken(null);
   setCurrentUser(null);
   };
+  const handleUnauthorized = useCallback(() => {
+  setAccessToken(null);
+  setCurrentUser(null);
+  setActivePage("home");
+  setSelectedTripId(null);
+}, []);
 
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -465,17 +476,35 @@ function App() {
               : "Main navigation"
           }
         >
-          <a href="#home">
-            {t("home")}
-          </a>
+          <button
+  type="button"
+  className="nav-link-button"
+  onClick={() => {
+    setActivePage("home");
+    setSelectedTripId(null);
+  }}
+>
+  {t("home")}
+</button>
 
           <a href="#destinations">
             {t("destinations")}
           </a>
 
-          <a href="#trips">
-            {t("myTrips")}
-          </a>
+          <button
+           type="button"
+           className="nav-link-button"
+           onClick={() => {
+            if (!currentUser) {
+             setShowAuthModal(true);
+            } else {
+             setActivePage("trips");
+             setSelectedTripId(null);
+            }
+          }}
+         >
+          {t("myTrips")}
+         </button>
         </nav>
 
         {/* Language Switcher */}
@@ -527,6 +556,7 @@ function App() {
       ====================================== */}
 
       <main id="home">
+       {activePage === "home" && (
 
         <section className="hero">
 
@@ -1123,6 +1153,35 @@ function App() {
 
           </form>
         </section>
+          )}
+
+  
+{activePage === "trips" &&
+  currentUser &&
+  accessToken &&
+  (
+    selectedTripId === null ? (
+      <MyTrips
+        accessToken={accessToken}
+        currentUser={currentUser}
+        isArabic={isArabic}
+        onUnauthorized={handleUnauthorized}
+        onViewTrip={(tripId) => {
+          setSelectedTripId(tripId);
+        }}
+      />
+    ) : (
+      <SavedTripDetails
+        tripId={selectedTripId}
+        accessToken={accessToken}
+        isArabic={isArabic}
+        onBack={() => setSelectedTripId(null)}
+        onUnauthorized={handleUnauthorized}
+      />
+    )
+  )
+}
+
       </main>
       {showAuthModal && (
         <AuthModal

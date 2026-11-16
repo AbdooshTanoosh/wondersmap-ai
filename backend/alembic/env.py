@@ -18,7 +18,10 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from app.database.connection import Base, engine
+import os
+
+from sqlalchemy import create_engine
+from app.database.connection import Base, engine as app_engine
 import app.models
 
 target_metadata = Base.metadata
@@ -54,8 +57,25 @@ def run_migrations_offline() -> None:
 
 
 
+
 def run_migrations_online() -> None:
-    with engine.connect() as connection:
+    test_database_url = os.getenv("WONDERSMAP_TEST_DATABASE_URL")
+
+    migration_engine = (
+        create_engine(test_database_url)
+        if test_database_url
+        else app_engine
+    )
+
+    # Extra protection: verify the expected database
+    # before running automated test migrations.
+    if test_database_url:
+        if migration_engine.url.database != "wondersmap_test_db":
+            raise RuntimeError(
+                "Test migrations must use wondersmap_test_db"
+            )
+
+    with migration_engine.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
@@ -64,6 +84,10 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+
+    if test_database_url:
+        migration_engine.dispose()
+
 
 
 

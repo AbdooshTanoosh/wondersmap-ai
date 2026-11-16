@@ -1,0 +1,30 @@
+
+name: wondersmap-ai
+
+services:
+  db:
+    image: postgres:17
+    container_name: wondersmap-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: wondersmap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: wondersmap_db
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U wondersmap -d wondersmap_db
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
