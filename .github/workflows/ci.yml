@@ -36,6 +36,13 @@ jobs:
       POSTGRES_DB: wondersmap_test_db
       POSTGRES_USER: wondersmap
       POSTGRES_PASSWORD: ci_test_password
+
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: wondersmap_test_db
+      DB_USER: wondersmap
+      DB_PASSWORD: ci_test_password
+
       JWT_SECRET_KEY: ci-only-test-secret-not-for-production
       OPENAI_API_KEY: ci-placeholder-not-used
 
