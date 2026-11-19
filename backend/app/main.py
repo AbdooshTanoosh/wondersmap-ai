@@ -10,6 +10,10 @@ from app.api.trips import router as saved_trips_router
 from app.schemas.itinerary import AIItineraryWithBudget
 from app.services.budget_service import calculate_trip_budget
 from app.services.ai_trip_service import generate_ai_itinerary
+
+from app.schemas.regenerate_day import RegenerateDayRequest
+from app.services.regenerate_day_service import regenerate_itinerary_day
+
 from typing import Literal
 
 app = FastAPI(
@@ -153,4 +157,32 @@ def generate_trip(trip: AITripRequest):
             detail="AI itinerary generation is unavailable."
         ) from exc
 
+
+@app.post(
+    "/api/trips/regenerate-day",
+    response_model=AIItineraryWithBudget,
+)
+def regenerate_day(request: RegenerateDayRequest):
+    try:
+        updated_itinerary = regenerate_itinerary_day(
+            request
+        )
+
+        return updated_itinerary
+
+    except (OpenAIError, RuntimeError, ValueError) as exc:
+        import logging
+
+        logger = logging.getLogger("wondersmap.ai")
+
+        logger.error(
+            "Day regeneration failed: type=%s, status=%s",
+            type(exc).__name__,
+            getattr(exc, "status_code", None),
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="AI day regeneration is unavailable.",
+        ) from exc
 

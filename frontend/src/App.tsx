@@ -25,6 +25,19 @@ type TripSummary = {
   language: string;
 };
 
+type AITripPayload = {
+  departure_city: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  adults: number;
+  children: number;
+  budget: number;
+  currency: "CAD";
+  preferences: string[];
+  language: "en" | "ar";
+};
+
 type TripResponse = {
   status: string;
   message: string;
@@ -130,6 +143,11 @@ function App() {
 
   const [itinerary, setItinerary] =
     useState<AIItinerary | null>(null);
+
+  // Keep the trip settings used when the itinerary was generated.
+  // This prevents later form edits from changing regeneration context.
+  const [generatedTripPayload, setGeneratedTripPayload] =
+    useState<AITripPayload | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -155,6 +173,8 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [regeneratingDay, setRegeneratingDay] =
+    useState<number | null>(null);
   const [error, setError] = useState("");
 
   const apiBaseUrl =
@@ -183,6 +203,7 @@ function App() {
     // Clear previous content generated in another language
     setTripData(null);
     setItinerary(null);
+    setGeneratedTripPayload(null);
     setError("");
   };
 
@@ -190,7 +211,7 @@ function App() {
   // TRIP REQUEST PAYLOAD
   // ==========================================
 
-  const getTripPayload = () => ({
+  const getTripPayload = (): AITripPayload => ({
     departure_city: departureCity.trim(),
     destination: destination.trim(),
     start_date: startDate,
@@ -296,7 +317,7 @@ function App() {
   ) => {
     event.preventDefault();
 
-    if (loading || generating) return;
+    if (loading || generating || regeneratingDay !== null) return;
 
     setError("");
 
@@ -305,6 +326,7 @@ function App() {
     setLoading(true);
     setTripData(null);
     setItinerary(null);
+    setGeneratedTripPayload(null);
 
     try {
       const response = await fetch(
@@ -350,15 +372,17 @@ function App() {
   // ==========================================
 
   const handleGenerateAI = async () => {
-    if (generating || loading) return;
+    if (generating || loading || regeneratingDay !== null) return;
 
     setError("");
 
     if (!validateTrip(true)) return;
 
+    const tripPayload = getTripPayload();
     setGenerating(true);
     setTripData(null);
     setItinerary(null);
+    setGeneratedTripPayload(null);
 
     try {
       const response = await fetch(
@@ -368,7 +392,7 @@ function App() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(getTripPayload()),
+          body: JSON.stringify(tripPayload),
         }
       );
 
@@ -387,6 +411,7 @@ function App() {
         );
       }
 
+      setGeneratedTripPayload(tripPayload);
       setItinerary(data);
 
     } catch (err) {
@@ -402,6 +427,67 @@ function App() {
       );
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // ==========================================
+  // REGENERATE ONE ITINERARY DAY
+  // ==========================================
+
+  const handleRegenerateDay = async (dayNumber: number) => {
+    if (
+      !itinerary ||
+      !generatedTripPayload ||
+      regeneratingDay !== null ||
+      generating ||
+      loading
+    ) return;
+
+    setError("");
+    setRegeneratingDay(dayNumber);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/trips/regenerate-day`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trip: generatedTripPayload,
+            itinerary: {
+              trip_title: itinerary.trip_title,
+              overview: itinerary.overview,
+              days: itinerary.days,
+              travel_tips: itinerary.travel_tips,
+              disclaimer: itinerary.disclaimer,
+            },
+            day_number: dayNumber,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Day regeneration failed: ${response.status}`);
+      }
+
+      const updated: AIItinerary = await response.json();
+
+      if (!updated.budget_summary) {
+        throw new Error("Budget summary missing from API response");
+      }
+
+      setItinerary(updated);
+    } catch (err) {
+      console.error("Day regeneration error:", err);
+      setError(
+        isArabic
+          ? "تعذر إعادة إنشاء اليوم. حاول مرة أخرى."
+          : "Unable to regenerate this day. Please try again."
+      );
+    } finally {
+      setRegeneratingDay(null);
     }
   };
 
@@ -513,6 +599,7 @@ function App() {
           <button
             type="button"
             className="language-button"
+            disabled={regeneratingDay !== null}
             onClick={() =>
               changeLanguage(
                 isArabic ? "en" : "ar"
@@ -757,7 +844,7 @@ function App() {
               className="plan-button"
               type="submit"
               disabled={
-                loading || generating
+                loading || generating || regeneratingDay !== null
               }
             >
               {loading
@@ -771,7 +858,7 @@ function App() {
               className="plan-button ai-button"
               onClick={handleGenerateAI}
               disabled={
-                loading || generating
+                loading || generating || regeneratingDay !== null
               }
             >
               {generating
@@ -1076,6 +1163,26 @@ function App() {
                           {" — "}
                           {day.title}
                         </h3>
+
+                        <button
+                          type="button"
+                          className="regenerate-day-button"
+                          onClick={() => handleRegenerateDay(day.day)}
+                          disabled={
+                            regeneratingDay !== null ||
+                            generating ||
+                            loading ||
+                            !generatedTripPayload
+                          }
+                        >
+                          {regeneratingDay === day.day
+                            ? isArabic
+                              ? "⏳ جاري إعادة إنشاء اليوم..."
+                              : "⏳ Regenerating day..."
+                            : isArabic
+                              ? "🔄 إعادة إنشاء هذا اليوم"
+                              : "🔄 Regenerate This Day"}
+                        </button>
 
                         {day.activities.map(
                           (activity, index) => (
