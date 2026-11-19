@@ -5,6 +5,7 @@ import AuthModal, { type AuthUser } from "./components/AuthModal";
 import "./App.css";
 import MyTrips from "./components/MyTrips";
 import SavedTripDetails from "./components/SavedTripDetails";
+import TravelMap from "./components/TravelMap";
 
 // ==========================================
 // TYPES
@@ -1225,7 +1226,11 @@ function App() {
                   )}
 
                 </div>
+                {/* =====================================
+                       INTERACTIVE TRAVEL MAP
+                  ====================================== */}
 
+                  <TravelMap isArabic={isArabic} />
                 {/* =====================================
                     TRAVEL TIPS
                 ====================================== */}

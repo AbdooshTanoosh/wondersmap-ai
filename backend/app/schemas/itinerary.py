@@ -13,12 +13,35 @@ ExpenseCategory = Literal[
 ]
 
 
+
 class Activity(BaseModel):
     time: str
     name: str
     description: str
     category: ExpenseCategory
     estimated_cost_cad: float = Field(ge=0)
+
+    # Searchable location name for map integration
+    
+    # Location details for interactive maps
+    location_query: str | None = Field(
+        ...,
+        max_length=200
+    )
+
+    latitude: float | None = Field(
+        ...,
+        ge=-90,
+        le=90
+    )
+
+    longitude: float | None = Field(
+        ...,
+        ge=-180,
+        le=180
+    )
+
+
 
 
 class ItineraryDay(BaseModel):

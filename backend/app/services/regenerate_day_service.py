@@ -86,6 +86,15 @@ def regenerate_itinerary_day(
             "opening hours, or guaranteed availability. "
             "Keep airport transfers conditional on "
             "actual flight schedules."
+
+" Include a searchable location_query for activities "
+"that have a specific physical location. "
+"Use the place name, city, and country. "
+"Set location_query to null when a specific location "
+"cannot be identified. "
+"Always set latitude and longitude to null. "
+"Coordinates will be verified separately."
+
         ),
         input=json.dumps(
             trip_context,

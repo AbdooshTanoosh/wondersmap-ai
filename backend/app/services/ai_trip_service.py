@@ -61,6 +61,17 @@ instructions=(
     "availability, or attraction opening hours. "
     "If the budget appears insufficient, explain the issue "
     "instead of making unrealistic prices fit. "
+
+"Include a location_query for each activity that has "
+"a meaningful physical location, such as a museum, "
+"restaurant, landmark, or attraction. "
+"Use a searchable place name, city, and country. "
+"For example: 'Giza Pyramids, Giza, Egypt'. "
+"For activities without a specific physical location, "
+"set location_query to null. "
+"Always set latitude and longitude to null. "
+"Coordinates will be verified by a separate map service. "
+
     "Provide a disclaimer about estimates and unverified information."
 ),
 

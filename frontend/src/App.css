@@ -898,3 +898,37 @@ button {
     flex-direction: column;
   }
 }
+
+/* Interactive Travel Map */
+
+.travel-map-section {
+  margin-top: 28px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.travel-map-section h3 {
+  margin-bottom: 8px;
+}
+
+.travel-map-section .leaflet-container {
+  z-index: 0;
+}
+
+.wondersmap-marker {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  text-align: center;
+}
+.travel-map-section > p {
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.travel-map-section h3 {
+  color: #0f172a;
+}
